@@ -6,12 +6,22 @@
 #include <SPI.h>
 #include <SD.h>
 
+// Sensors functions and data
+void initSystem();
+void handleData();
+
+struct sensorTiming {
+    unsigned long frequency;
+    unsigned long previousTime;
+};
+
 // INA object and functions
 Adafruit_INA219 ina219;
 void initIna();
 void updateIna();
 void printDataIna();
 void saveDataIna();
+#define INA_FREQUENCY 1
 
 struct Ina {
     float shuntVoltage;
@@ -19,8 +29,7 @@ struct Ina {
     float loadVoltage;
     float current_mA;
     float power_mW;
-    float frequency;
-    unsigned long previousTime;
+    sensorTiming timeIna;
 }inaData;
 
 // BMP object and functions
@@ -30,14 +39,14 @@ void setBmpSettings();
 void updateBmp();
 void printDataBmp();
 void saveDataBmp();
-const float SEALEVELPRESSURE = 1020;
+#define SEALEVELPRESSURE 1020
+#define BMP_FREQUENCY 2
 
 struct Bmp {
     float temperature;
     float pressure;
     float altitude;
-    float frequency;
-    unsigned long previousTime;
+    sensorTiming timeBmp;
 }bmpData;
 
 // SD object and functions
@@ -45,23 +54,13 @@ File myFile;
 void initSd();
 void openFile(const char* filename);
 void closeFile();
-const byte CHIP_SELECT = 10;
-const byte CARD_DETECT = 9;
-
+#define CHIP_SELECT 10
+#define CARD_DETECT 9
 
 struct Sd {
     byte cs;
     byte cd;
 }sdPins;
-
-// Sensors functions and data
-void initSystem();
-void handleData();
-
-struct sensorTiming {
-    unsigned long frequency;
-    unsigned long previousTime;
-};
 
 void setup() {
     Serial.begin(9600);
@@ -89,8 +88,8 @@ void initIna() {
         }
     }
 
-    inaData.previousTime = 0;
-    inaData.frequency = 1;
+    inaData.timeIna.previousTime = 0;
+    inaData.timeIna.frequency = INA_FREQUENCY;
 
     Serial.println("Measuring voltage and current with INA219");
 }
@@ -122,7 +121,7 @@ void printDataIna() {
     Serial.print(inaData.power_mW);
     Serial.println(" mW");
     Serial.print("Time: ");
-    Serial.println(inaData.previousTime);
+    Serial.println(inaData.timeIna.previousTime);
 
     Serial.println("******************");
     
@@ -148,7 +147,7 @@ void saveDataIna() {
     myFile.print(inaData.power_mW);
     myFile.println(" mW");
     myFile.print("Time: ");
-    myFile.println(inaData.previousTime);
+    myFile.println(inaData.timeIna.previousTime);
 
     myFile.println("******************");
     
@@ -162,8 +161,8 @@ void initBmp() {
         while (1);
     }
 
-    bmpData.previousTime = 0;
-    bmpData.frequency = 0.5;
+    bmpData.timeBmp.previousTime = 0;
+    bmpData.timeBmp.frequency = BMP_FREQUENCY;
 
     setBmpSettings();
 
@@ -201,7 +200,7 @@ void printDataBmp() {
     Serial.println(" m");
 
     Serial.print("Time: ");
-    Serial.println(bmpData.previousTime);
+    Serial.println(bmpData.timeBmp.previousTime);
 
     Serial.println("******************");
 
@@ -224,7 +223,7 @@ void saveDataBmp() {
     myFile.println(" m");
 
     myFile.print("Time: ");
-    myFile.println(bmpData.previousTime);
+    myFile.println(bmpData.timeBmp.previousTime);
 
     myFile.println("******************");
 
@@ -242,18 +241,18 @@ void handleData() {
     unsigned long currentTime = millis();
 
 
-    if (currentTime - inaData.previousTime >= 1000.0/inaData.frequency) {
+    if (currentTime - inaData.timeIna.previousTime >= 1000.0/inaData.timeIna.frequency) {
         openFile("snsrs.txt"); 
-        inaData.previousTime = currentTime;
+        inaData.timeIna.previousTime = currentTime;
         updateIna();
         printDataIna();
         saveDataIna();
         closeFile();
     }
 
-    if (currentTime - bmpData.previousTime >= 1000.0/bmpData.frequency) {
+    if (currentTime - bmpData.timeBmp.previousTime >= 1000.0/bmpData.timeBmp.frequency) {
         openFile("snsrs.txt"); 
-        bmpData.previousTime = currentTime;
+        bmpData.timeBmp.previousTime = currentTime;
         updateBmp();
         printDataBmp();
         saveDataBmp();

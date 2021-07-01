@@ -4,23 +4,21 @@
 #include <Adafruit_INA219.h>
 #include <Adafruit_BMP280.h>
 
+// Common functions
+void initSystem();
+void printData();
+
+struct sensorTiming {
+    unsigned long frequency;
+    unsigned long previousTime;
+};
+
 // INA object and functions
 Adafruit_INA219 ina219;
 void initIna();
 void updateIna();
 void printDataIna();
-
-// BMP object and functions
-Adafruit_BMP280 bmp;
-void initBmp();
-void setBmpSettings();
-void updateBmp();
-void printDataBmp();
-const float SEALEVELPRESSURE = 1020;
-
-// Common functions
-void initSystem();
-void printData();
+#define INA_FREQUENCY 1
 
 struct Ina {
     float shuntVoltage;
@@ -28,22 +26,25 @@ struct Ina {
     float loadVoltage;
     float current_mA;
     float power_mW;
-    float frequency;
-    unsigned long previousTime;
+    sensorTiming timeIna;
 }inaData;
+
+// BMP object and functions
+Adafruit_BMP280 bmp;
+void initBmp();
+void setBmpSettings();
+void updateBmp();
+void printDataBmp();
+#define SEALEVELPRESSURE 1020
+#define BMP_FREQUENCY 2
 
 struct Bmp {
     float temperature;
     float pressure;
     float altitude;
     float frequency;
-    unsigned long previousTime;
+    sensorTiming timeBmp;
 }bmpData;
-
-struct sensorTiming {
-    unsigned long frequency;
-    unsigned long previousTime;
-};
 
 void setup() {
     Serial.begin(9600);
@@ -71,8 +72,8 @@ void initIna() {
         }
     }
 
-    inaData.previousTime = 0;
-    inaData.frequency = 1;
+    inaData.timeIna.previousTime = 0;
+    inaData.timeIna.frequency = INA_FREQUENCY;
 
     Serial.println("Measuring voltage and current with INA219");
 }
@@ -104,7 +105,7 @@ void printDataIna() {
     Serial.print(inaData.power_mW);
     Serial.println(" mW");
     Serial.print("Time: ");
-    Serial.println(inaData.previousTime);
+    Serial.println(inaData.timeIna.previousTime);
 
     Serial.println("******************");
     
@@ -119,8 +120,8 @@ void initBmp() {
         while (1);
     }
 
-    bmpData.previousTime = 0;
-    bmpData.frequency = 0.5;
+    bmpData.timeBmp.previousTime = 0;
+    bmpData.frequency = BMP_FREQUENCY;
 
     setBmpSettings();
 
@@ -158,7 +159,7 @@ void printDataBmp() {
     Serial.println(" m");
 
     Serial.print("Time: ");
-    Serial.println(bmpData.previousTime);
+    Serial.println(bmpData.timeBmp.previousTime);
 
     Serial.println("******************");
 
@@ -174,14 +175,14 @@ void initSystem() {
 void printData() {
     unsigned long currentTime = millis();
 
-    if (currentTime - inaData.previousTime >= 1000.0/inaData.frequency) {
-        inaData.previousTime = currentTime;
+    if (currentTime - inaData.timeIna.previousTime >= 1000.0/inaData.timeIna.frequency) {
+        inaData.timeIna.previousTime = currentTime;
         updateIna();
         printDataIna();
     }
 
-    if (currentTime - bmpData.previousTime >= 1000.0/bmpData.frequency) {
-        bmpData.previousTime = currentTime;
+    if (currentTime - bmpData.timeBmp.previousTime >= 1000.0/bmpData.timeBmp.frequency) {
+        bmpData.timeBmp.previousTime = currentTime;
         updateBmp();
         printDataBmp();
     }

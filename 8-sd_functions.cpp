@@ -12,6 +12,9 @@ struct Sd {
     byte cd;
 }sdPins;
 
+#define CHIP_SELECT 10
+#define CARD_DETECT 9
+
 void setup() {
     Serial.begin(9600);
     while (!Serial) {
@@ -29,8 +32,8 @@ void loop() {
 }
 
 void initSd() {
-    sdPins.cs = 10;
-    sdPins.cd = 9;
+    sdPins.cs = CHIP_SELECT;
+    sdPins.cd = CARD_DETECT;
 
     pinMode(sdPins.cd, INPUT);
 
